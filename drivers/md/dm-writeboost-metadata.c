@@ -512,14 +512,15 @@ static int format_all_segment_headers(struct wb_device *wb)
 	struct dm_dev *dev = wb->cache_dev;
 	u32 i, nr_segments = calc_nr_segments(dev, wb);
 
-	struct format_segmd_context context;
+	struct format_segmd_context *context = kmalloc(sizeof(*context), GFP_KERNEL);
+	/* TODO needs error check */
 
 	void *buf = kzalloc(1 << 12, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
-	atomic64_set(&context.count, nr_segments);
-	context.err = 0;
+	atomic64_set(&context->count, nr_segments);
+	context->err = 0;
 
 	/*
 	 * submit all the writes asynchronously.
@@ -529,7 +530,7 @@ static int format_all_segment_headers(struct wb_device *wb)
 			.client = wb_io_client,
 			.bi_rw = WRITE,
 			.notify.fn = format_segmd_endio,
-			.notify.context = &context,
+			.notify.context = context,
 			.mem.type = DM_IO_KMEM,
 			.mem.ptr.addr = buf,
 		};
@@ -552,10 +553,10 @@ static int format_all_segment_headers(struct wb_device *wb)
 	/*
 	 * wait for all the writes complete.
 	 */
-	while (atomic64_read(&context.count))
+	while (atomic64_read(&context->count))
 		schedule_timeout_interruptible(msecs_to_jiffies(100));
 
-	if (context.err) {
+	if (context->err) {
 		WBERR("I/O failed at last");
 		return -EIO;
 	}
