@@ -250,6 +250,11 @@ struct migrate_io {
 };
 #define migrate_io_from_node(node) rb_entry((node), struct migrate_io, rb_node)
 
+struct segment_migrate {
+	struct migrate_io *ios;
+	void *buf;
+};
+
 /*----------------------------------------------------------------*/
 
 enum STATFLAG {

@@ -1523,6 +1523,49 @@ static int recover_cache(struct wb_device *wb)
 
 /*----------------------------------------------------------------*/
 
+static int alloc_segment_migrate(struct wb_device *wb)
+{
+	int r = 0;
+	u8 i;
+
+	struct segment_migrate *segmig = kmalloc(sizeof(*segmig), GFP_NOIO);
+	if (!segmig)
+		return -ENOMEM;
+
+	segmig->ios = kmalloc(wb->nr_caches_inseg * sizeof(struct migrate_io), GFP_NOIO);
+	if (!segmig->ios) {
+		r = -ENOMEM;
+		goto bad_ios;
+	}
+
+	segmig->buf = kmem_cache_alloc(wb->rambuf_cachep, GFP_NOIO);
+	if (!segmig->buf) {
+		r = -ENOMEM;
+		goto bad_buf;
+	}
+
+	for (i = 0; i < wb->nr_caches_inseg; i++) {
+		struct migrate_io *mio = segmig->ios + i;
+		mio->data = segmig->buf + ((1 + i) << 12);
+	}
+
+	return r;
+
+bad_buf:
+	kfree(segmig->ios);
+bad_ios:
+	kfree(segmig);
+
+	return r;
+}
+
+static void free_segment_migrate(struct wb_device *wb, struct segment_migrate *segmig)
+{
+	kmem_cache_free(wb->rambuf_cachep, segmig->buf);
+	kfree(segmig->ios);
+	kfree(segmig);
+}
+
 /*
  * try to allocate new migration buffer by the @nr_batch size.
  * on success, it frees the old buffer.
