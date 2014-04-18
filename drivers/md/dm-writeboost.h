@@ -239,6 +239,22 @@ struct plog_meta_device {
 
 /*----------------------------------------------------------------*/
 
+/*
+ * sorted batched migration
+ * -----------------
+ *
+ * migrate daemon writes back segments on the cache device effectively.
+ * "batched" means it migrates number of segments at the same time
+ * in asynchronous manner.
+ * "sorted" means these migrate IOs are sorted in ascending order of
+ * LBA in the backing device. rb-tree is used to sort the migrate IOs.
+ *
+ * reading from the cache device is sequential thus also effective.
+ */
+
+/*
+ * migration of a cache line
+ */
 struct migrate_io {
 	struct rb_node rb_node;
 
@@ -249,6 +265,15 @@ struct migrate_io {
 	u8 memorized_dirtiness;
 };
 #define migrate_io_from_node(node) rb_entry((node), struct migrate_io, rb_node)
+
+/*
+ * migration of a segment
+ */
+struct segment_migrate {
+	struct segment_header *seg;
+	struct migrate_io *ios;
+	void *buf; /* sequentially read */
+};
 
 /*----------------------------------------------------------------*/
 
@@ -433,9 +458,7 @@ struct wb_device {
 	struct rb_root migrate_tree;
 
 	u32 num_emigrates; /* number of emigrates */
-	struct segment_header **emigrates; /* segments to be migrated */
-	void *migrate_buffer; /* the data blocks of the emigrates */
-	struct migrate_io *migrate_ios;
+	struct segment_migrate **emigrates;
 
 	/*---------------------------------------------*/
 
