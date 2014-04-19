@@ -158,8 +158,8 @@ static void submit_migrate_io(struct wb_device *wb, struct migrate_io *mio)
 			.bi_rw = WRITE,
 			.notify.fn = migrate_endio,
 			.notify.context = wb,
-			.mem.type = DM_IO_VMA,
-			.mem.ptr.vma = mio->data,
+			.mem.type = DM_IO_KMEM,
+			.mem.ptr.addr = mio->data,
 		};
 		struct dm_io_region region_w = {
 			.bdev = wb->backing_dev->bdev,
@@ -182,8 +182,8 @@ static void submit_migrate_io(struct wb_device *wb, struct migrate_io *mio)
 				.bi_rw = WRITE,
 				.notify.fn = migrate_endio,
 				.notify.context = wb,
-				.mem.type = DM_IO_VMA,
-				.mem.ptr.vma = mio->data + (i << SECTOR_SHIFT),
+				.mem.type = DM_IO_KMEM,
+				.mem.ptr.addr = mio->data + (i << SECTOR_SHIFT),
 			};
 			region_w = (struct dm_io_region) {
 				.bdev = wb->backing_dev->bdev,
@@ -274,7 +274,7 @@ static void prepare_migrate_ios(struct wb_device *wb, struct segment_migrate *se
 		.bi_rw = READ,
 		.notify.fn = NULL,
 		.mem.type = DM_IO_KMEM,
-		.mem.ptr.vma = segmig->buf,
+		.mem.ptr.addr = segmig->buf,
 	};
 	struct dm_io_region region_r = {
 		.bdev = wb->cache_dev->bdev,
@@ -314,6 +314,7 @@ static void transport_emigrates(struct wb_device *wb)
 	struct segment_migrate *segmig;
 
 	wb->migrate_tree = RB_ROOT;
+
 
 	for (k = 0; k < wb->num_emigrates; k++) {
 		segmig = *(wb->emigrates + k);

@@ -1636,7 +1636,8 @@ int try_alloc_migrate_ios(struct wb_device *wb, size_t nr_batch)
 	/*
 	 * free old buffers
 	 */
-	free_migrate_ios(wb);
+	if (wb->emigrates)
+		free_migrate_ios(wb);
 
 	/*
 	 * swap by new values
